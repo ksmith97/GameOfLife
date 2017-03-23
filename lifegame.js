@@ -2,9 +2,11 @@ var _ = require('underscore')
 
 const colors = ["red", "blue", "yellow", "orange", "green", "purple", "orangered"];
 
-function generateRandomState() {
-    var init = _.map(_.range(0, 100), function() {
-        return _.map(_.range(0, 100), function() {
+function generateRandomState(canvas) {
+    const wide = Math.ceil(canvas.width / 10);
+    const tall = Math.ceil(canvas.height / 10);
+    const init = _.map(_.range(0, tall), function() {
+        return _.map(_.range(0, wide), function() {
             if(Math.floor(Math.random() * 10) < 4)
                 return {color: _.sample(colors)};
             else
@@ -16,8 +18,8 @@ function generateRandomState() {
 }
 
 function checkNeighbor(array, x, y) {
-    x = x < 0 ? 99 : ((x >= 100 ) ? 0 : x);
-    y = y < 0 ? 99 : ((y >= 100 ) ? 0 : y);
+    x = x < 0 ? 99 : ((x >= array[0].length ) ? 0 : x);
+    y = y < 0 ? 99 : ((y >= array.length ) ? 0 : y);
     
     return array[y][x] ? 1 : 0;
 }
@@ -33,21 +35,24 @@ function draw(canvas, array) {
 function draw2dArray(canvas, array) {
     //Reset the canvas by reassigning the width
     canvas.width = canvas.width;
-    drawArray(canvas, _.reduce( array, function(frst, sec) { return frst.concat(sec); }));
-};
-
-function drawArray(canvas, array) {
     var context = canvas.getContext("2d");
+
     for(var x=0; x < array.length; x++) {
-        drawElement(context, array[x], x);
+      drawArray(context, array[x], x);
     }
 };
 
-function drawElement(context, value, index) {
+function drawArray(context, array, index) {
+    for(var x=0; x < array.length; x++) {
+        drawElement(context, array[x], x, index);
+    }
+};
+
+function drawElement(context, value, xIndex, yIndex) {
     if(value === 0) return;
     
-    var x = (index % 100 ) * 10,
-    y = Math.floor(index / 100) * 10;
+    var x = xIndex * 10,
+    y = yIndex * 10;
     context.fillStyle = _.sample(colors);
     context.fillRect(x, y, 10, 10);
 };
@@ -95,7 +100,7 @@ function calculateNewState(oldState) {
 };
 
 window.createGame = function(canvas) {
-  const init = generateRandomState();
+  const init = generateRandomState(canvas);
   let gameState = init;
   draw(canvas, init);
 
@@ -108,23 +113,30 @@ window.createGame = function(canvas) {
 
   var interval = 100,
       mainLoop = null;
-  _.extend(window, {
-      "start" : function() {
+  const controls = {
+      start : function() {
           if(!mainLoop)
               mainLoop = setInterval(step, interval);
       },
-      "stop" : function() {
+      stop : function() {
           mainLoop && clearInterval(mainLoop);
           mainLoop = null;
       },
-      "updateInterval" : function(newInterval) {
-          interval = newInterval;
-          stop();
-          start();
+      updateInterval : function(newInterval) {
+          const value = parseInt(newInterval);
+          if(!value) throw new Error("Invalid integer given to update.");
+
+          interval = value;
+          if(mainLoop) {
+            controls.stop();
+            controls.start();
+          }
       },
-      "regenerate" : function() {
-          gameState = generateRandomState();
+      regenerate : function() {
+          gameState = generateRandomState(canvas);
           draw(canvas, gameState)
       },
-  });
+      interval: () => interval
+  }
+  return controls;
 }
