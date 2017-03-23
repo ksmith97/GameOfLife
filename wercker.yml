@@ -2,11 +2,16 @@ box: node
 
 build:
     steps:
+        - npm-install
+        - script:
+            code: export NODE_ENV=production
+        - maxon/npm-run:
+            script: build
 deploy:
     steps:
         - s3sync:
             key-id: $AWS_ACCESS_KEY
             key_secret: $AWS_SECRET_KEY
             bucket_url: $AWS_BUCKET_URL
-            source_dir: /
+            source_dir: dist
             opts: --acl-public --add-header=Cache-Control:public, max-age 86400
